@@ -14,7 +14,7 @@ static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
 
 Tank* tankList[MAXP1 + MAXP2];
-int tankGrid[257 * GRIDWIDTH * GRIDHEIGHT];
+int tankGrid[32 * GRIDWIDTH * GRIDHEIGHT];
 
 // smoke particle effect tick function
 void Smoke::Tick()
@@ -90,13 +90,35 @@ void Tank::Tick()
 		}
 	}
 	// evade other tanks
-	for ( unsigned int i = 0; i < (MAXP1 + MAXP2); i++ )
+#ifdef GRID
+	int x = ((int)pos.x / GRIDSIZE) - 1;
+	int y = ((int)pos.y / GRIDSIZE)  - 1;
+	for(int i = 0; i < 3; i++)
+		for (int j = 0; j < 3; j++)
+		{
+			int newGridPointer = ((x+i) + (y+j) * (GRIDWIDTH - 1)) * GRIDROW;
+			int gridCounter = tankGrid[newGridPointer];
+			for (int k = 1; k <= gridCounter; k++)
+			{
+				int tankID = tankGrid[gridPointer + k];
+				if (tankList[tankID] == this) continue;
+				float2 d = pos - tankList[tankID]->pos;
+				if (length(d) < 8) force += normalize(d) * 2.0f;
+				else if (length(d) < 16) force += normalize(d) * 0.4f;
+			}
+		}
+#endif
+
+#ifndef GRID
+	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++)
 	{
 		if (game->m_Tank[i] == this) continue;
 		float2 d = pos - game->m_Tank[i]->pos;
-		if (length( d ) < 8) force += normalize( d ) * 2.0f;
-		else if (length( d ) < 16) force += normalize( d ) * 0.4f;
+		if (length(d) < 8) force += normalize(d) * 2.0f;
+		else if (length(d) < 16) force += normalize(d) * 0.4f;
 	}
+#endif // !1
+
 	// evade user dragged line
 	if ((flags & P1) && (game->m_LButton))
 	{
@@ -109,19 +131,6 @@ void Tank::Tick()
 	// update speed using accumulated force
 	speed += force, speed = normalize( speed ), pos += speed * maxspeed * 0.5f;
 #ifdef GRID
-	//tankList[((int)pos.x)<<4, ((int)pos.y)<<4]->push_back(this);
-	
-	/*int gridCount = tankGrid[oldGridPointer];
-	tankGrid[gridPosition] = tankGrid[oldGridPointer + gridCount];
-	tankGrid[gridCount]--;
-	
-	int gridPointer = (((int)pos.x )>> 4) * (((int)pos.y)>> 4);
-	gridCount = tankGrid[gridPointer];
-	tankGrid[gridPointer + gridCount + 1] = listPosition;
-	tankGrid[gridPointer]++;
-	oldGridPointer = gridPointer;
-	gridPosition = gridPointer + gridCount + 1;*/
-
 	UpdateGrid();
 #endif // GRID
 
@@ -184,7 +193,7 @@ void Tank::CheckShooting()
 // Game::Init - Load data, setup playfield
 void Game::Init()
 {
-	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*257; i++)
+	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*32; i++)
 	{
 		if (i >= 920000)
 			int x = 0;
