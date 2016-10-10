@@ -1,4 +1,5 @@
 #include "template.h"
+#include <list>
 
 // global data (source scope)
 static Game* game;
@@ -11,6 +12,9 @@ static float peakh[16] = { 200, 150, 160, 255, 200, 255, 200, 300, 120, 100,  80
 // player, bullet and smoke data
 static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
+
+Tank* tankList[MAXP1 + MAXP2];
+int tankGrid[257 * GRIDWIDTH * GRIDHEIGHT];
 
 // smoke particle effect tick function
 void Smoke::Tick()
@@ -104,16 +108,73 @@ void Tank::Tick()
 	}
 	// update speed using accumulated force
 	speed += force, speed = normalize( speed ), pos += speed * maxspeed * 0.5f;
+#ifdef GRID
+	//tankList[((int)pos.x)<<4, ((int)pos.y)<<4]->push_back(this);
+	
+	/*int gridCount = tankGrid[oldGridPointer];
+	tankGrid[gridPosition] = tankGrid[oldGridPointer + gridCount];
+	tankGrid[gridCount]--;
+	
+	int gridPointer = (((int)pos.x )>> 4) * (((int)pos.y)>> 4);
+	gridCount = tankGrid[gridPointer];
+	tankGrid[gridPointer + gridCount + 1] = listPosition;
+	tankGrid[gridPointer]++;
+	oldGridPointer = gridPointer;
+	gridPosition = gridPointer + gridCount + 1;*/
+
+	UpdateGrid();
+#endif // GRID
+
+#ifndef GRID
 	// shoot, if reloading completed
 	if (--reloading >= 0) return;
 	unsigned int start = 0, end = MAXP1;
 	if (flags & P1) start = MAXP1, end = MAXP1 + MAXP2;
-	for ( unsigned int i = start; i < end; i++ ) if (game->m_Tank[i]->flags & ACTIVE)
+	for (unsigned int i = start; i < end; i++) if (game->m_Tank[i]->flags & ACTIVE)
 	{
 		float2 d = game->m_Tank[i]->pos - pos;
-		if ((length( d ) < 100) && (dot( normalize( d ), speed ) > 0.99999f))
+		if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
 		{
-			Fire( flags & (P1|P2), pos, speed ); // shoot
+			Fire(flags & (P1 | P2), pos, speed); // shoot
+			reloading = 200; // and wait before next shot is ready
+			break;
+		}
+	}
+#endif // !GRID
+}
+
+void Tank::UpdateGrid()
+{
+	// Remove from old position
+	int gridCounter = tankGrid[gridPointer];
+	tankGrid[gridPosition] = tankGrid[gridPointer + gridCounter];
+	tankGrid[gridPointer]--;
+	
+	// Add to new position
+	ADDTOGRID();
+}
+
+void Tank::ADDTOGRID()
+{
+	int x = (int) pos.x / GRIDSIZE;
+	int y = ((int)pos.y / GRIDSIZE) * (GRIDWIDTH - 1);
+	gridPointer = (x+y) * GRIDROW;
+	int gridCounter = ++tankGrid[gridPointer];
+	gridPosition = gridPointer + gridCounter;
+	tankGrid[gridPosition] = listPosition;
+}
+
+void Tank::CheckShooting()
+{
+	if (--reloading >= 0) return;
+	unsigned int start = 0, end = MAXP1;
+	if (flags & P1) start = MAXP1, end = MAXP1 + MAXP2;
+	for (unsigned int i = start; i < end; i++) if (game->m_Tank[i]->flags & ACTIVE)
+	{
+		float2 d = game->m_Tank[i]->pos - pos;
+		if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
+		{
+			Fire(flags & (P1 | P2), pos, speed); // shoot
 			reloading = 200; // and wait before next shot is ready
 			break;
 		}
@@ -123,6 +184,13 @@ void Tank::Tick()
 // Game::Init - Load data, setup playfield
 void Game::Init()
 {
+	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*257; i++)
+	{
+		if (i >= 920000)
+			int x = 0;
+		tankGrid[i] = 0;
+	}
+
 	m_Heights = new Surface( "testdata/heightmap.png" ), m_Backdrop = new Surface( 1024, 768 ), m_Grid = new Surface( 1024, 768 );
 	Pixel* a1 = m_Grid->GetBuffer(), *a2 = m_Backdrop->GetBuffer(), *a3 = m_Heights->GetBuffer();
 	for ( int y = 0; y < 768; y++ ) for ( int idx = y * 1024, x = 0; x < 1024; x++, idx++ ) a1[idx] = (((x & 31) == 0) | ((y & 31) == 0)) ? 0x6600 : 0;
@@ -143,6 +211,9 @@ void Game::Init()
 	{
 		Tank* t = m_Tank[i] = new Tank();
 		t->pos = float2( (float)((i % 5) * 20), (float)((i / 5) * 20 + 50) );
+		tankList[i] = t;
+		t->listPosition = i;
+		t->ADDTOGRID();
 		t->target = float2( SCRWIDTH, SCRHEIGHT ); // initially move to bottom right corner
 		t->speed = float2( 0, 0 ), t->flags = Tank::ACTIVE|Tank::P1, t->maxspeed = (i < (MAXP1 / 2))?0.65f:0.45f;
 	}
@@ -151,6 +222,9 @@ void Game::Init()
 	{
 		Tank* t = m_Tank[i + MAXP1] = new Tank();
 		t->pos = float2( (float)((i % 12) * 20 + 900), (float)((i / 12) * 20 + 600) );
+		tankList[i+MAXP1] = t;
+		t->listPosition = i+MAXP1;
+		t->ADDTOGRID();
 		t->target = float2( 424, 336 ); // move to player base
 		t->speed = float2( 0, 0 ), t->flags = Tank::ACTIVE|Tank::P2, t->maxspeed = 0.3f;
 	}
@@ -205,12 +279,15 @@ void Game::PlayerInput()
 // Game::Tick - main game loop
 void Game::Tick( float a_DT )
 {
+#ifdef GRID
+#endif // 
 	POINT p;
 	GetCursorPos( &p );
 	ScreenToClient( FindWindow( NULL, "Template" ), &p );
 	m_LButton = (GetAsyncKeyState( VK_LBUTTON ) != 0), m_MouseX = p.x, m_MouseY = p.y;
 	m_Backdrop->CopyTo( m_Surface, 0, 0 );
 	for ( unsigned int i = 0; i < (MAXP1 + MAXP2); i++ ) m_Tank[i]->Tick();
+	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++) m_Tank[i]->CheckShooting();
 	for ( unsigned int i = 0; i < MAXBULLET; i++ ) bullet[i].Tick();
 	DrawTanks();
 	PlayerInput();

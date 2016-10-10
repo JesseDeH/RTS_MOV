@@ -6,9 +6,17 @@
 
 namespace Tmpl8 {
 
-#define MAXP1		 80				// increase to test your optimized code
+#define MAXP1		 160				// increase to test your optimized code
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
+
+#define GRIDSIZE		16
+//#define MAXTANKSGRID	GRIDSIZE*GRIDSIZE
+#define GRIDWIDTH		70
+#define GRIDHEIGHT		105
+#define GRIDROW			GRIDSIZE*GRIDSIZE+1;
+
+#define GRID
 
 class Smoke
 {
@@ -28,10 +36,16 @@ public:
 	Tank() : pos( float2( 0, 0 ) ), speed( float2( 0, 0 ) ), target( float2( 0, 0 ) ), reloading( 0 ) {};
 	~Tank();
 	void Fire( unsigned int party, float2& pos, float2& dir );
+	void CheckShooting();
 	void Tick();
+	void UpdateGrid();
+	void ADDTOGRID();
 	float2 pos, speed, target;
 	float maxspeed;
 	int flags, reloading;
+	int listPosition;
+	int gridPosition;
+	int gridPointer;
 	Smoke smoke;
 };
 
