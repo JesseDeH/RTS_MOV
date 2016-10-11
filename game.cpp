@@ -176,6 +176,42 @@ void Tank::ADDTOGRID()
 
 void Tank::CheckShooting()
 {
+#ifdef GRID2
+	if (--reloading >= 0) return;
+	int team = P1;
+	if (flags & P1)
+		team = P2;
+	int x = max(((int)pos.x / GRIDSIZE) - 14, 0);
+	int y = max(((int)pos.y / GRIDSIZE) - 14, 0);
+	for (int i = 0; i < 28; i++)
+		for (int j = 0; j < 28; j++)
+		{
+			if (x + i > GRIDWIDTH)
+				return;
+			if (y + j > GRIDHEIGHT)
+				return;
+			int targetGridPointer = ((x + i) + (y + j) * (GRIDWIDTH - 1)) * GRIDROW;
+			int gridCounter = tankGrid[targetGridPointer];
+			for (int k = 1; k <= gridCounter; k++)
+			{
+				int tankID = tankGrid[gridPointer + k];
+				if (game->m_Tank[tankID]->flags & team)
+					if (game->m_Tank[tankID]->flags & ACTIVE)
+					{
+						float2 d = game->m_Tank[tankID]->pos - pos;
+						if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
+						{
+							Fire(flags & (P1 | P2), pos, speed); // shoot
+							reloading = 200; // and wait before next shot is ready
+							break;
+						}
+					}
+			}
+}
+
+#endif
+
+#ifndef GRID2
 	if (--reloading >= 0) return;
 	unsigned int start = 0, end = MAXP1;
 	if (flags & P1) start = MAXP1, end = MAXP1 + MAXP2;
@@ -189,6 +225,7 @@ void Tank::CheckShooting()
 			break;
 		}
 	}
+#endif
 }
 
 // Game::Init - Load data, setup playfield

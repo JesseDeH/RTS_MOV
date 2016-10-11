@@ -16,6 +16,7 @@ namespace Tmpl8 {
 #define GRIDROW			32												// How much data is there for era
 
 #define GRID
+#define GRID2
 
 class Smoke
 {
