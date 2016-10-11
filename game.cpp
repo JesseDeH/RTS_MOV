@@ -181,10 +181,10 @@ void Tank::CheckShooting()
 	int team = P1;
 	if (flags & P1)
 		team = P2;
-	int x = max(((int)pos.x / GRIDSIZE) - 14, 0);
-	int y = max(((int)pos.y / GRIDSIZE) - 14, 0);
-	for (int i = 0; i < 28; i++)
-		for (int j = 0; j < 28; j++)
+	int x = max(((int)pos.x / GRIDSIZE) - 7, 0);
+	int y = max(((int)pos.y / GRIDSIZE) - 7, 0);
+	for (int i = 0; i < 15; i++)
+		for (int j = 0; j < 15; j++)
 		{
 			if (x + i > GRIDWIDTH)
 				return;
