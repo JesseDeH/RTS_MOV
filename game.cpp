@@ -13,7 +13,6 @@ static float peakh[16] = { 200, 150, 160, 255, 200, 255, 200, 300, 120, 100,  80
 static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
 
-Tank* tankList[MAXP1 + MAXP2];
 int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 
 // smoke particle effect tick function
@@ -102,8 +101,8 @@ void Tank::Tick()
 			for (int k = 1; k <= gridCounter; k++)
 			{
 				int tankID = tankGrid[gridPointer + k];
-				if (tankList[tankID] == this) continue;
-				float2 d = pos - tankList[tankID]->pos;
+				if (game->m_Tank[tankID] == this) continue;
+				float2 d = pos - game->m_Tank[tankID]->pos;
 				if (length(d) < 8) force += normalize(d) * 2.0f;
 				else if (length(d) < 16) force += normalize(d) * 0.4f;
 			}
@@ -220,7 +219,6 @@ void Game::Init()
 	{
 		Tank* t = m_Tank[i] = new Tank();
 		t->pos = float2( (float)((i % 5) * 20), (float)((i / 5) * 20 + 50) );
-		tankList[i] = t;
 		t->listPosition = i;
 		t->ADDTOGRID();
 		t->target = float2( SCRWIDTH, SCRHEIGHT ); // initially move to bottom right corner
@@ -231,7 +229,6 @@ void Game::Init()
 	{
 		Tank* t = m_Tank[i + MAXP1] = new Tank();
 		t->pos = float2( (float)((i % 12) * 20 + 900), (float)((i / 12) * 20 + 600) );
-		tankList[i+MAXP1] = t;
 		t->listPosition = i+MAXP1;
 		t->ADDTOGRID();
 		t->target = float2( 424, 336 ); // move to player base
