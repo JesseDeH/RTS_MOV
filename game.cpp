@@ -14,7 +14,7 @@ static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
 
 Tank* tankList[MAXP1 + MAXP2];
-int tankGrid[32 * GRIDWIDTH * GRIDHEIGHT];
+int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 
 // smoke particle effect tick function
 void Smoke::Tick()
@@ -89,6 +89,7 @@ void Tank::Tick()
 			}
 		}
 	}
+
 	// evade other tanks
 #ifdef GRID
 	int x = ((int)pos.x / GRIDSIZE) - 1;
@@ -96,8 +97,8 @@ void Tank::Tick()
 	for(int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++)
 		{
-			int newGridPointer = ((x+i) + (y+j) * (GRIDWIDTH - 1)) * GRIDROW;
-			int gridCounter = tankGrid[newGridPointer];
+			int targetGridPointer = ((x+i) + (y+j) * (GRIDWIDTH - 1)) * GRIDROW;
+			int gridCounter = tankGrid[targetGridPointer];
 			for (int k = 1; k <= gridCounter; k++)
 			{
 				int tankID = tankGrid[gridPointer + k];
@@ -117,7 +118,7 @@ void Tank::Tick()
 		if (length(d) < 8) force += normalize(d) * 2.0f;
 		else if (length(d) < 16) force += normalize(d) * 0.4f;
 	}
-#endif // !1
+#endif // GRID
 
 	// evade user dragged line
 	if ((flags & P1) && (game->m_LButton))
@@ -128,6 +129,7 @@ void Tank::Tick()
 		float dist = dot( N, pos ) - dot( N, float2( x1, y1 ) );
 		if (fabs( dist ) < 10) if (dist > 0) force += N * 20; else force -= N * 20;
 	}
+
 	// update speed using accumulated force
 	speed += force, speed = normalize( speed ), pos += speed * maxspeed * 0.5f;
 #ifdef GRID
@@ -193,10 +195,8 @@ void Tank::CheckShooting()
 // Game::Init - Load data, setup playfield
 void Game::Init()
 {
-	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*32; i++)
+	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*GRIDROW; i++)
 	{
-		if (i >= 920000)
-			int x = 0;
 		tankGrid[i] = 0;
 	}
 
