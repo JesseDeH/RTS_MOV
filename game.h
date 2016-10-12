@@ -6,13 +6,13 @@
 
 namespace Tmpl8 {
 
-#define MAXP1		 160			// increase to test your optimized code
+#define MAXP1		 800			// increase to test your optimized code
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
 
 #define GRIDSIZE		16												// How many pixels is one grid space
-#define GRIDWIDTH		(11 * 20 + 900) / GRIDSIZE						// How many grid spaces wide is the grid
-#define GRIDHEIGHT		((int) (MAXP2 / 12 * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
+#define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE	+ 1)				// How many grid spaces wide is the grid
+#define GRIDHEIGHT		((int) ((MAXP2 / 12) * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
 #define GRIDROW			32												// How much data is there for era
 
 #define GRID

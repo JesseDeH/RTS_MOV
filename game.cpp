@@ -91,25 +91,35 @@ void Tank::Tick()
 
 	// evade other tanks
 #ifdef GRID
-	int x = ((int)pos.x / GRIDSIZE) - 1;
-	int y = ((int)pos.y / GRIDSIZE)  - 1;
-	for(int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++)
+	int grid_x = (int)(pos.x / GRIDSIZE);
+	int grid_y = (int)(pos.y / GRIDSIZE);
+	int gridPointer = ( grid_x + (grid_y * GRIDWIDTH) ) * GRIDROW;
+	int gridCounter = tankGrid[gridPointer];
+	int start_x = (grid_x - 1) < 0 ? grid_x : (grid_x - 1);
+	int start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
+	int end_x = (grid_x + 1) >= GRIDWIDTH ? grid_x : (grid_x + 1);
+	int end_y = (grid_y + 1) >= GRIDHEIGHT ? grid_y : (grid_y + 1);
+	for (int i = start_x; i <= end_x; i++)
+	{
+		for (int j = start_y; j <= end_y; j++)
 		{
-			int targetGridPointer = ((x+i) + (y+j) * (GRIDWIDTH - 1)) * GRIDROW;
-			int gridCounter = tankGrid[targetGridPointer];
-			for (int k = 1; k <= gridCounter; k++)
+			int c_x = i;
+			int c_y = j;
+			int c_gridPointer = (c_x + (c_y * GRIDWIDTH)) * GRIDROW;
+			int c_gridCounter = tankGrid[c_gridPointer];
+			for (int c = 1; c <= c_gridCounter; c++)
 			{
-				int tankID = tankGrid[gridPointer + k];
-				if (game->m_Tank[tankID] == this) continue;
-				float2 d = pos - game->m_Tank[tankID]->pos;
+				int c_tankPointer = tankGrid[c_gridPointer + c];
+				if (game->m_Tank[c_tankPointer] == this) continue;
+				float2 d = pos - game->m_Tank[c_tankPointer]->pos;
 				if (length(d) < 8) force += normalize(d) * 2.0f;
 				else if (length(d) < 16) force += normalize(d) * 0.4f;
 			}
 		}
-#endif
+	}
 
-#ifndef GRID
+
+#else
 	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++)
 	{
 		if (game->m_Tank[i] == this) continue;
@@ -135,7 +145,7 @@ void Tank::Tick()
 	UpdateGrid();
 #endif // GRID
 
-#ifndef GRID
+#ifndef GRID2
 	// shoot, if reloading completed
 	if (--reloading >= 0) return;
 	unsigned int start = 0, end = MAXP1;
@@ -166,10 +176,12 @@ void Tank::UpdateGrid()
 
 void Tank::ADDTOGRID()
 {
-	int x = (int) pos.x / GRIDSIZE;
-	int y = ((int)pos.y / GRIDSIZE) * (GRIDWIDTH - 1);
+	int x = (int)(pos.x / GRIDSIZE);
+	int y = (int)(pos.y / GRIDSIZE) * (GRIDWIDTH);
 	gridPointer = (x+y) * GRIDROW;
 	int gridCounter = ++tankGrid[gridPointer];
+	if (gridCounter > GRIDROW)
+		throw ERROR;
 	gridPosition = gridPointer + gridCounter;
 	tankGrid[gridPosition] = listPosition;
 }
@@ -177,28 +189,32 @@ void Tank::ADDTOGRID()
 void Tank::CheckShooting()
 {
 #ifdef GRID2
-	if (--reloading >= 0) return;
+	if (--reloading >= 0 || !(flags & ACTIVE)) return;
 	int team = P1;
 	if (flags & P1)
 		team = P2;
-	int x = max(((int)pos.x / GRIDSIZE) - 7, 0);
-	int y = max(((int)pos.y / GRIDSIZE) - 7, 0);
-	for (int i = 0; i < 15; i++)
-		for (int j = 0; j < 15; j++)
+	int grid_x = (int)(pos.x / GRIDSIZE);
+	int grid_y = (int)(pos.y / GRIDSIZE);
+
+	int start_x = max(grid_x - 7, 0);
+	int start_y = max(grid_y - 7, 0);
+	int end_x = min(grid_x + 7, GRIDWIDTH - 1);
+	int end_y = min(grid_y + 7, GRIDHEIGHT - 1);
+
+	for (int i = start_x; i <= end_x; i++)
+	{
+		for (int j = start_y; j <= end_y; j++)
 		{
-			if (x + i > GRIDWIDTH)
-				return;
-			if (y + j > GRIDHEIGHT)
-				return;
-			int targetGridPointer = ((x + i) + (y + j) * (GRIDWIDTH - 1)) * GRIDROW;
-			int gridCounter = tankGrid[targetGridPointer];
-			for (int k = 1; k <= gridCounter; k++)
+			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
+			int c_gridCounter = tankGrid[c_gridPointer];
+			for (int c = c_gridPointer + 1; c <= c_gridPointer + c_gridCounter; c++)
 			{
-				int tankID = tankGrid[gridPointer + k];
-				if (game->m_Tank[tankID]->flags & team)
-					if (game->m_Tank[tankID]->flags & ACTIVE)
+				int c_tankPointer = tankGrid[c];
+				if (game->m_Tank[c_tankPointer]->flags & team)
+				{
+					if (game->m_Tank[c_tankPointer]->flags & ACTIVE)
 					{
-						float2 d = game->m_Tank[tankID]->pos - pos;
+						float2 d = game->m_Tank[c_tankPointer]->pos - pos;
 						if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
 						{
 							Fire(flags & (P1 | P2), pos, speed); // shoot
@@ -206,9 +222,10 @@ void Tank::CheckShooting()
 							break;
 						}
 					}
+				}
 			}
-}
-
+		}
+	}
 #endif
 
 #ifndef GRID2
@@ -256,8 +273,10 @@ void Game::Init()
 	{
 		Tank* t = m_Tank[i] = new Tank();
 		t->pos = float2( (float)((i % 5) * 20), (float)((i / 5) * 20 + 50) );
+#ifdef GRID
 		t->listPosition = i;
 		t->ADDTOGRID();
+#endif //GRID
 		t->target = float2( SCRWIDTH, SCRHEIGHT ); // initially move to bottom right corner
 		t->speed = float2( 0, 0 ), t->flags = Tank::ACTIVE|Tank::P1, t->maxspeed = (i < (MAXP1 / 2))?0.65f:0.45f;
 	}
@@ -266,8 +285,10 @@ void Game::Init()
 	{
 		Tank* t = m_Tank[i + MAXP1] = new Tank();
 		t->pos = float2( (float)((i % 12) * 20 + 900), (float)((i / 12) * 20 + 600) );
-		t->listPosition = i+MAXP1;
+#ifdef GRID
+		t->listPosition = i + MAXP1;
 		t->ADDTOGRID();
+#endif //GRID
 		t->target = float2( 424, 336 ); // move to player base
 		t->speed = float2( 0, 0 ), t->flags = Tank::ACTIVE|Tank::P2, t->maxspeed = 0.3f;
 	}
