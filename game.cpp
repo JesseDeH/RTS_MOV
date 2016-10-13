@@ -84,8 +84,13 @@ void Tank::Tick()
 			float r = sqrtf( sd );
 			for( int j = 0; j < 720; j++ )
 			{
+#ifdef SINCOSLOOKUP
 				float x = peakx[i] + r * sinTable[j];
 				float y = peaky[i] + r * cosTable[j];
+#else
+				float x = peakx[i] + r * sinf( (float)j * PI / 360.0f );
+				float y = peaky[i] + r * cosf( (float)j * PI / 360.0f );
+#endif
 				game->m_Surface->AddPlot( (int)x, (int)y, 0x000500 );
 			}
 		}
