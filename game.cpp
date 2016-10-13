@@ -14,6 +14,8 @@ static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
 
 int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
+float sinTable[720];
+float cosTable[720];
 
 // smoke particle effect tick function
 void Smoke::Tick()
@@ -82,8 +84,8 @@ void Tank::Tick()
 			float r = sqrtf( sd );
 			for( int j = 0; j < 720; j++ )
 			{
-				float x = peakx[i] + r * sinf( (float)j * PI / 360.0f );
-				float y = peaky[i] + r * cosf( (float)j * PI / 360.0f );
+				float x = peakx[i] + r * sinTable[j];
+				float y = peaky[i] + r * cosTable[j];
 				game->m_Surface->AddPlot( (int)x, (int)y, 0x000500 );
 			}
 		}
@@ -252,6 +254,13 @@ void Game::Init()
 	{
 		tankGrid[i] = 0;
 	}
+#ifdef SINCOSLOOKUP
+	for (int j = 0; j < 720; j++)
+	{
+		sinTable[j] = sinf((float)j * PI / 360.0f);
+		cosTable[j] = cosf((float)j * PI / 360.0f);
+	}
+#endif // SINCOSLOOKUP
 
 	m_Heights = new Surface( "testdata/heightmap.png" ), m_Backdrop = new Surface( 1024, 768 ), m_Grid = new Surface( 1024, 768 );
 	Pixel* a1 = m_Grid->GetBuffer(), *a2 = m_Backdrop->GetBuffer(), *a3 = m_Heights->GetBuffer();
