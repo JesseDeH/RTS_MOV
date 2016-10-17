@@ -15,7 +15,7 @@ static Bullet bullet[MAXBULLET];
 #ifdef MORTON
 int tankGrid[0xffffff];
 #else 
-int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
+float tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 #endif 
 float sinTable[720];
 float cosTable[720];
@@ -113,7 +113,8 @@ void Tank::Tick()
 	int grid_y = (int)(pos.y / GRIDSIZE);
 #ifdef MORTON
 	int gridPointer = game->Morton(grid_x, grid_y);
-#else
+#endif
+#ifndef MORTON //&& TILES
 	int gridPointer = (grid_x + (grid_y * GRIDWIDTH)) * GRIDROW;
 #endif
 	int gridCounter = tankGrid[gridPointer];
@@ -127,17 +128,32 @@ void Tank::Tick()
 		{
 #ifdef MORTON
 			int c_gridPointer = game->Morton(i, j);
-#else
+#endif
+#ifndef MORTON // TILES
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
 			int c_gridCounter = tankGrid[c_gridPointer];
 			for (int c = 1; c <= c_gridCounter; c++)
 			{
+#ifdef POSINGRID
+				//debug
+				//int c_tankPointer = tankGrid[c_gridPointer + (c * 3)];
+				//if (game->m_Tank[c_tankPointer] == this) continue;
+				//float2 d = pos - game->m_Tank[c_tankPointer]->pos;
+				//Tank* t = game->m_Tank[c_tankPointer];
+				int c_tankPointer2 = c_gridPointer + (c * 3);
+				if (c_tankPointer2 == gridPosition) continue;
+
+				float2 d2 = pos - float2(tankGrid[c_tankPointer2 + 1], tankGrid[c_tankPointer2 + 2]);
+				if (length(d2) < 8) force += normalize(d2) * 2.0f;
+				else if (length(d2) < 16) force += normalize(d2) * 0.4f;
+#else
 				int c_tankPointer = tankGrid[c_gridPointer + c];
 				if (game->m_Tank[c_tankPointer] == this) continue;
 				float2 d = pos - game->m_Tank[c_tankPointer]->pos;
 				if (length(d) < 8) force += normalize(d) * 2.0f;
 				else if (length(d) < 16) force += normalize(d) * 0.4f;
+#endif
 			}
 		}
 	}
@@ -168,6 +184,7 @@ void Tank::Tick()
 #endif // GRID
 #ifdef GRID2
 	if (--reloading >= 0 || !(flags & ACTIVE)) return;
+	if ((pos.x < 0) || (pos.x >(SCRWIDTH - 1)) || (pos.y < 0) || (pos.y >(SCRHEIGHT - 1))) return; // off-screen
 	int team = 3;
 	if (flags & P1)
 		team = 5;
@@ -178,30 +195,35 @@ void Tank::Tick()
 	start_x = max(grid_x - 7, 0);
 	end_x = min(grid_x + 7, GRIDWIDTH - 1);
 
+	float start_y2 = max(grid_y - 7, 0);
+	float end_y2 = min(grid_y + 7, GRIDHEIGHT - 1);
+	//int c_gridPointer = (start_x + (start_y * GRIDWIDTH)) * GRIDROW;
 	for (int i = start_x; i <= end_x; i++)
 	{
 		for (int j = start_y; j <= end_y; j++)
 		{
 #ifdef MORTON
 			int c_gridPointer = game->Morton(i, j);
-#else
+#endif
+#ifndef MORTON// && TILES
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
 			int c_gridCounter = tankGrid[c_gridPointer];
-			int c = c_gridPointer + 1;
+			/*int c = c_gridPointer + 1;
 			int c_max = c_gridPointer + c_gridCounter;
-			int c_dif = c_max - c;
-			for (int d = c_dif; d >= 0; d--)
+			int c_dif = c_max - c;*/
+			for (int d = c_gridPointer + 1; d <= c_gridCounter + c_gridPointer; d++)
 			{
-				int c_tankPointer = tankGrid[c_max - d];
+				int c_tankPointer = tankGrid[d];
 				if (game->m_Tank[c_tankPointer]->flags == team)
+				//if ((c_tankPointer >= MAXP2 && listPosition < MAXP2) || (c_tankPointer < MAXP2 && listPosition >= MAXP2))
 				{
-					float2 d = game->m_Tank[c_tankPointer]->pos - pos;
-					if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
+					float2 l = game->m_Tank[c_tankPointer]->pos - pos;
+					if ((length(l) < 100) && (dot(normalize(l), speed) > 0.99999f))
 					{
 						Fire(flags & (P1 | P2), pos, speed); // shoot
 						reloading = 200; // and wait before next shot is ready
-						break;
+						return;
 					}
 				}
 			}
@@ -229,7 +251,13 @@ void Tank::UpdateGrid()
 {
 	// Remove from old position
 	int gridCounter = tankGrid[gridPointer];
-	tankGrid[gridPosition] = tankGrid[gridPointer + gridCounter];
+	tankGrid[gridPosition] = tankGrid[gridPointer + (gridCounter * 3)];
+	tankGrid[gridPosition + 1] = tankGrid[gridPointer + (gridCounter * 3) + 1];
+	tankGrid[gridPosition + 2] = tankGrid[gridPointer + (gridCounter * 3) + 2];
+	int tankPointer = tankGrid[gridPosition];
+	game->m_Tank[tankPointer]->gridPosition = gridPosition;
+
+
 	tankGrid[gridPointer]--;
 
 	// Add to new position
@@ -243,13 +271,13 @@ void Tank::ADDTOGRID()
 #ifdef MORTON
 	gridPointer = game->Morton(x, y);
 #else
-	gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
+	this->gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
 #endif
 	int gridCounter = ++tankGrid[gridPointer];
-	if (gridCounter > GRIDROW)
-		throw ERROR;
-	gridPosition = gridPointer + gridCounter;
+	this->gridPosition = gridPointer + (gridCounter * 3);
 	tankGrid[gridPosition] = listPosition;
+	tankGrid[gridPosition + 1] = pos.x;
+	tankGrid[gridPosition + 2] = pos.y;
 }
 
 void Tank::CheckShooting()
