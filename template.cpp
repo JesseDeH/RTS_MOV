@@ -16,6 +16,7 @@ namespace Tmpl8 {
 
 float length( const float3& v ) { return sqrtf( v.x * v.x + v.y * v.y + v.z * v.z ); } 
 float length( const float2& v ) { return sqrtf( v.x * v.x + v.y * v.y ); }
+float sqlength(const float2& v) { return (v.x * v.x + v.y * v.y); }
 float3 normalize( const float3& v ) { float l = 1.0f / length( v ); return float3( v.x * l, v.y * l, v.z * l ); }
 float2 normalize( const float2& v ) { float l = 1.0f / length( v ); return float2( v.x * l, v.y * l ); }
 float dot( const float3& a, const float3& b ) { return a.x * b.x + a.y * b.y + a.z * b.z; }

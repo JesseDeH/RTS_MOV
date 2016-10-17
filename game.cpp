@@ -117,7 +117,7 @@ void Tank::Tick()
 #ifndef MORTON //&& TILES
 	int gridPointer = (grid_x + (grid_y * GRIDWIDTH)) * GRIDROW;
 #endif
-	int gridCounter = tankGrid[gridPointer];
+	float gridCounter = tankGrid[gridPointer];
 	int start_x = (grid_x - 1) < 0 ? grid_x : (grid_x - 1);
 	int start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
 	int end_x = (grid_x + 1) >= GRIDWIDTH ? grid_x : (grid_x + 1);
@@ -132,7 +132,7 @@ void Tank::Tick()
 #ifndef MORTON // TILES
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
-			int c_gridCounter = tankGrid[c_gridPointer];
+			float c_gridCounter = tankGrid[c_gridPointer];
 			for (int c = 1; c <= c_gridCounter; c++)
 			{
 #ifdef POSINGRID
@@ -145,8 +145,9 @@ void Tank::Tick()
 				if (c_tankPointer2 == gridPosition) continue;
 
 				float2 d2 = pos - float2(tankGrid[c_tankPointer2 + 1], tankGrid[c_tankPointer2 + 2]);
-				if (length(d2) < 8) force += normalize(d2) * 2.0f;
-				else if (length(d2) < 16) force += normalize(d2) * 0.4f;
+				//if (length(d2) < 8) force += normalize(d2) * 2.0f;
+				if (sqlength(d2) < 64) force += normalize(d2) * 2.0f;
+				else if (sqlength(d2) < 256) force += normalize(d2) * 0.4f;
 #else
 				int c_tankPointer = tankGrid[c_gridPointer + c];
 				if (game->m_Tank[c_tankPointer] == this) continue;
@@ -195,8 +196,8 @@ void Tank::Tick()
 	start_x = max(grid_x - 7, 0);
 	end_x = min(grid_x + 7, GRIDWIDTH - 1);
 
-	float start_y2 = max(grid_y - 7, 0);
-	float end_y2 = min(grid_y + 7, GRIDHEIGHT - 1);
+	int start_y2 = max(grid_y - 7, 0);
+	int end_y2 = min(grid_y + 7, GRIDHEIGHT - 1);
 	//int c_gridPointer = (start_x + (start_y * GRIDWIDTH)) * GRIDROW;
 	for (int i = start_x; i <= end_x; i++)
 	{
@@ -208,13 +209,13 @@ void Tank::Tick()
 #ifndef MORTON// && TILES
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
-			int c_gridCounter = tankGrid[c_gridPointer];
+			float c_gridCounter = tankGrid[c_gridPointer];
 			/*int c = c_gridPointer + 1;
 			int c_max = c_gridPointer + c_gridCounter;
 			int c_dif = c_max - c;*/
-			for (int d = c_gridPointer + 1; d <= c_gridCounter + c_gridPointer; d++)
+			for (int d = c_gridPointer + 3; d <= ((int)c_gridCounter * 3) + c_gridPointer; d+=3)
 			{
-				int c_tankPointer = tankGrid[d];
+				int c_tankPointer = (int)tankGrid[d];
 				if (game->m_Tank[c_tankPointer]->flags == team)
 				//if ((c_tankPointer >= MAXP2 && listPosition < MAXP2) || (c_tankPointer < MAXP2 && listPosition >= MAXP2))
 				{
@@ -250,11 +251,11 @@ void Tank::Tick()
 void Tank::UpdateGrid()
 {
 	// Remove from old position
-	int gridCounter = tankGrid[gridPointer];
+	int gridCounter = (int)tankGrid[gridPointer];
 	tankGrid[gridPosition] = tankGrid[gridPointer + (gridCounter * 3)];
 	tankGrid[gridPosition + 1] = tankGrid[gridPointer + (gridCounter * 3) + 1];
 	tankGrid[gridPosition + 2] = tankGrid[gridPointer + (gridCounter * 3) + 2];
-	int tankPointer = tankGrid[gridPosition];
+	int tankPointer = (int)tankGrid[gridPosition];
 	game->m_Tank[tankPointer]->gridPosition = gridPosition;
 
 
@@ -273,9 +274,9 @@ void Tank::ADDTOGRID()
 #else
 	this->gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
 #endif
-	int gridCounter = ++tankGrid[gridPointer];
+	int gridCounter = (int)++tankGrid[gridPointer];
 	this->gridPosition = gridPointer + (gridCounter * 3);
-	tankGrid[gridPosition] = listPosition;
+	tankGrid[gridPosition] = (float)listPosition;
 	tankGrid[gridPosition + 1] = pos.x;
 	tankGrid[gridPosition + 2] = pos.y;
 }

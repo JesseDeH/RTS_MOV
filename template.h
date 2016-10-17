@@ -31,7 +31,7 @@ public:
 	void operator *= ( float a ) { x *= a; y *= a; }
 	float& operator [] ( const int idx ) { return cell[idx]; }
 	float length() { return sqrtf( x * x + y * y ); }
-	float sqrLentgh() { return x * x + y * y; }
+	float sqlength() { return x * x + y * y; }
 	float2 normalized() { float r = 1.0f / length(); return float2( x * r, y * r ); }
 	void normalize() { float r = 1.0f / length(); x *= r; y *= r; }
 	static float2 normalize( float2 v ) { return v.normalized(); }
@@ -77,6 +77,7 @@ float3 operator * ( const float& s, const float3& v );
 float3 operator * ( const float3& v, const float& s );
 float2 operator * ( float2& v, float& s );
 float length( const float2& v );
+float sqlength(const float2& v);
 
 };
 
