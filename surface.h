@@ -12,7 +12,7 @@ namespace Tmpl8 {
 #define BLUEMASK (0x0000ff)
 #define REDBLUE (0x00FF00FF)
 
-#define ADDPLOT1
+//#define ADDPLOT1
 //#define ADDPLOT2
 
 typedef unsigned long Pixel;

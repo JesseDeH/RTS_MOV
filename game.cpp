@@ -17,6 +17,8 @@ int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 float sinTable[720];
 float cosTable[720];
 
+char mountain [SCRWIDTH + SCRHEIGHT * SCRWIDTH];
+
 // smoke particle effect tick function
 void Smoke::Tick()
 {
@@ -91,7 +93,13 @@ void Tank::Tick()
 				float x = peakx[i] + r * sinf((float)j * PI / 360.0f);
 				float y = peaky[i] + r * cosf((float)j * PI / 360.0f);
 #endif
-				game->m_Surface->AddPlot((int)x, (int)y, 0x000500);
+
+#ifdef MOUNTAIN
+				int t = ((int)x) + (((int)y) * SCRWIDTH);
+				mountain[t]++;
+#else 
+				game->m_Surface->AddPlot((int)x, (int)y, 0xffff);
+#endif // ! MOUNTAIN	
 			}
 		}
 	}
@@ -285,6 +293,21 @@ void Game::Init()
 	m_P2Sprite = new Sprite(new Surface("testdata/p2tank.tga"), 1, Sprite::FLARE);
 	m_PXSprite = new Sprite(new Surface("testdata/deadtank.tga"), 1, Sprite::BLACKFLARE);
 	m_Smoke = new Sprite(new Surface("testdata/smoke.tga"), 10, Sprite::FLARE);
+
+#ifndef TEST
+	mountain_Grid = new Surface(500, 500);
+	Pixel* bufferGrid = m_Grid->GetBuffer();
+	Pixel* bufferMountain = m_Grid->GetBuffer();
+	for (int i = 0; i < 500; i++)
+		for (int j = 0; j < 500; j++)
+		{
+			int t = i + j * mountain_Grid->GetPitch();
+			int t2
+			bufferGrid[t] = bufferMountain[t];
+		}
+	m_Grid->SetBuffer(bufferGrid);
+#endif
+
 	// create blue tanks
 	for (unsigned int i = 0; i < MAXP1; i++)
 	{
@@ -360,8 +383,23 @@ void Game::PlayerInput()
 // Game::Tick - main game loop
 void Game::Tick(float a_DT)
 {
-#ifdef GRID
-#endif // 
+#ifdef MOUNTAIN
+	int max = SCRWIDTH + (SCRWIDTH * SCRHEIGHT);
+	for (int t = 0; t < max; t++)
+		{
+			mountain[t] = 0;
+		}
+#endif
+
+#ifdef MOUNTAIN2
+	for (int x = 0; x < SCRWIDTH; x++)
+		for (int y = 0; y < SCRHEIGHT; y++)
+		{
+			int t = x + (y * SCRWIDTH);
+			mountain[t] = 0;
+		}
+#endif
+
 	POINT p;
 	GetCursorPos(&p);
 	ScreenToClient(FindWindow(NULL, "Template"), &p);
@@ -372,6 +410,30 @@ void Game::Tick(float a_DT)
 	for (unsigned int i = 0; i < MAXBULLET; i++) bullet[i].Tick();
 	DrawTanks();
 	PlayerInput();
+
+#ifdef MOUNTAIN2
+	for (int t = 0; t < max; t++)
+	{
+		int count = mountain[t];
+		int x = t % SCRWIDTH;
+		int y = t / SCRWIDTH;
+		game->m_Surface->AddPlot(x, y, count * 0xffff);
+	}
+#endif
+
+#ifdef MOUNTAIN
+	int t = 0;
+	for (int y = 0; y < SCRHEIGHT; y++)
+		for (int x = 0; x < SCRWIDTH; x++)
+		{
+			if (int count = mountain[t] > 0)
+			{
+				game->m_Surface->AddPlot(x, y, count * 0xffff);
+			}
+			t++;
+		}
+#endif
+
 	char buffer[128];
 	if ((aliveP1 > 0) && (aliveP2 > 0))
 	{

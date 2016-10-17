@@ -6,7 +6,7 @@
 
 namespace Tmpl8 {
 
-#define MAXP1		1200			// increase to test your optimized code
+#define MAXP1		4000	// increase to test your optimized code
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
 
@@ -18,7 +18,8 @@ namespace Tmpl8 {
 #define GRID
 #define GRID2
 #define SINCOSLOOKUP
-
+#define MOUNTAIN
+#define TEST
 
 class Smoke
 {
@@ -77,7 +78,7 @@ public:
 	void DrawTanks();
 	void PlayerInput();
 	void Tick( float a_DT );
-	Surface* m_Surface, *m_Backdrop, *m_Heights, *m_Grid;
+	Surface* m_Surface, *m_Backdrop, *m_Heights, *m_Grid, *mountain_Grid;
 	Sprite* m_P1Sprite, *m_P2Sprite, *m_PXSprite, *m_Smoke;
 	int m_ActiveP1, m_ActiveP2;
 	int m_MouseX, m_MouseY, m_DStartX, m_DStartY, m_DFrames;
