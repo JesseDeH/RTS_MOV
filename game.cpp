@@ -12,8 +12,11 @@ static float peakh[16] = { 200, 150, 160, 255, 200, 255, 200, 300, 120, 100,  80
 // player, bullet and smoke data
 static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
-
+#ifdef MORTON
+int tankGrid[0xffffff];
+#else 
 int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
+#endif 
 float sinTable[720];
 float cosTable[720];
 
@@ -97,12 +100,14 @@ void Tank::Tick()
 	}
 
 	// evade other tanks
-
-
 #ifdef GRID
 	int grid_x = (int)(pos.x / GRIDSIZE);
 	int grid_y = (int)(pos.y / GRIDSIZE);
+#ifdef MORTON
+	int gridPointer = game->Morton(grid_x, grid_y);
+#else
 	int gridPointer = (grid_x + (grid_y * GRIDWIDTH)) * GRIDROW;
+#endif
 	int gridCounter = tankGrid[gridPointer];
 	int start_x = (grid_x - 1) < 0 ? grid_x : (grid_x - 1);
 	int start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
@@ -112,9 +117,11 @@ void Tank::Tick()
 	{
 		for (int j = start_y; j <= end_y; j++)
 		{
-			int c_x = i;
-			int c_y = j;
-			int c_gridPointer = (c_x + (c_y * GRIDWIDTH)) * GRIDROW;
+#ifdef MORTON
+			int c_gridPointer = game->Morton(i, j);
+#else
+			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
+#endif
 			int c_gridCounter = tankGrid[c_gridPointer];
 			for (int c = 1; c <= c_gridCounter; c++)
 			{
@@ -126,8 +133,6 @@ void Tank::Tick()
 			}
 		}
 	}
-
-
 #else
 	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++)
 	{
@@ -153,8 +158,48 @@ void Tank::Tick()
 #ifdef GRID
 	UpdateGrid();
 #endif // GRID
+#ifdef GRID2
+	if (--reloading >= 0 || !(flags & ACTIVE)) return;
+	int team = 3;
+	if (flags & P1)
+		team = 5;
 
-#ifndef GRID2
+	start_y = max(grid_y - 7, 0);
+	end_y = min(grid_y + 7, GRIDHEIGHT - 1);
+	
+	start_x = max(grid_x - 7, 0);
+	end_x = min(grid_x + 7, GRIDWIDTH - 1);
+
+	for (int i = start_x; i <= end_x; i++)
+	{
+		for (int j = start_y; j <= end_y; j++)
+		{
+#ifdef MORTON
+			int c_gridPointer = game->Morton(i, j);
+#else
+			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
+#endif
+			int c_gridCounter = tankGrid[c_gridPointer];
+			int c = c_gridPointer + 1;
+			int c_max = c_gridPointer + c_gridCounter;
+			int c_dif = c_max - c;
+			for (int d = c_dif; d >= 0; d--)
+			{
+				int c_tankPointer = tankGrid[c_max - d];
+				if (game->m_Tank[c_tankPointer]->flags == team)
+				{
+					float2 d = game->m_Tank[c_tankPointer]->pos - pos;
+					if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
+					{
+						Fire(flags & (P1 | P2), pos, speed); // shoot
+						reloading = 200; // and wait before next shot is ready
+						break;
+					}
+				}
+			}
+		}
+	}
+#else
 	// shoot, if reloading completed
 	if (--reloading >= 0) return;
 	unsigned int start = 0, end = MAXP1;
@@ -185,9 +230,13 @@ void Tank::UpdateGrid()
 
 void Tank::ADDTOGRID()
 {
-	int x = (int)(pos.x / GRIDSIZE);
-	int y = (int)(pos.y / GRIDSIZE) * (GRIDWIDTH);
-	gridPointer = (x + y) * GRIDROW;
+	int x = (unsigned int)(pos.x / GRIDSIZE);
+	int y = (unsigned int)(pos.y / GRIDSIZE);
+#ifdef MORTON
+	gridPointer = game->Morton(x, y);
+#else
+	gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
+#endif
 	int gridCounter = ++tankGrid[gridPointer];
 	if (gridCounter > GRIDROW)
 		throw ERROR;
@@ -197,25 +246,25 @@ void Tank::ADDTOGRID()
 
 void Tank::CheckShooting()
 {
-#ifdef GRID2
+#ifdef UNUSED
 	if (--reloading >= 0 || !(flags & ACTIVE)) return;
 	int team = 3;
 	if (flags & P1)
 		team = 5;
 
-	int grid_y = (int)(pos.y / GRIDSIZE);
-	int start_y = max(grid_y - 7, 0);
-	int end_y = min(grid_y + 7, GRIDHEIGHT - 1);
+	float grid_y = floorf(pos.y / GRIDSIZE);
+	float start_y = max(grid_y - 7, 0);
+	float end_y = min(grid_y + 7, GRIDHEIGHT - 1);
 
-	int grid_x = (int)(pos.x / GRIDSIZE);
-	int start_x = max(grid_x - 7, 0);
-	int end_x = min(grid_x + 7, GRIDWIDTH - 1);
+	float grid_x = floorf(pos.x / GRIDSIZE);
+	float start_x = max(grid_x - 7, 0);
+	float end_x = min(grid_x + 7, GRIDWIDTH - 1);
 
-	for (int i = start_x; i <= end_x; i++)
+	for (float i = start_x; i <= end_x; i++)
 	{
-		for (int j = start_y; j <= end_y; j++)
+		for (float j = start_y; j <= end_y; j++)
 		{
-			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
+			int c_gridPointer = ((int)i + ((int)j * GRIDWIDTH)) * GRIDROW;
 			int c_gridCounter = tankGrid[c_gridPointer];
 			int c = c_gridPointer + 1;
 			int c_max = c_gridPointer + c_gridCounter;
@@ -254,6 +303,24 @@ for (unsigned int i = start; i < end; i++) if (game->m_Tank[i]->flags & ACTIVE)
 }
 #endif
 }
+
+
+unsigned int Game::Morton(unsigned int x, unsigned int y)
+{
+	return (((intersperse(y) << 1) + intersperse(x)) * GRIDROW);
+}
+
+//separate each bit with a 0
+unsigned int Game::intersperse(unsigned int x)
+{
+	x &= 0x0000ffff;                 // x = ---- ---- ---- ---- fedc ba98 7654 3210
+	x = (x ^ (x << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
+	x = (x ^ (x << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
+	x = (x ^ (x << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
+	x = (x ^ (x << 1)) & 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
+	return x;
+}
+
 
 // Game::Init - Load data, setup playfield
 void Game::Init()
@@ -368,7 +435,7 @@ void Game::Tick(float a_DT)
 	m_LButton = (GetAsyncKeyState(VK_LBUTTON) != 0), m_MouseX = p.x, m_MouseY = p.y;
 	m_Backdrop->CopyTo(m_Surface, 0, 0);
 	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++) m_Tank[i]->Tick();
-	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++) m_Tank[i]->CheckShooting();
+	//for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++) m_Tank[i]->CheckShooting();
 	for (unsigned int i = 0; i < MAXBULLET; i++) bullet[i].Tick();
 	DrawTanks();
 	PlayerInput();

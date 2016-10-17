@@ -6,14 +6,14 @@
 
 namespace Tmpl8 {
 
-#define MAXP1		1200			// increase to test your optimized code
+#define MAXP1		800			// increase to test your optimized code
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
 
 #define GRIDSIZE		16												// How many pixels is one grid space
 #define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE	+ 1)				// How many grid spaces wide is the grid
 #define GRIDHEIGHT		((int) ((MAXP2 / 12) * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
-#define GRIDROW			16											// How much data is there for era
+#define GRIDROW			32											// How much data is there for era
 
 #define GRID
 #define GRID2
@@ -77,6 +77,9 @@ public:
 	void DrawTanks();
 	void PlayerInput();
 	void Tick( float a_DT );
+	unsigned int Morton(unsigned int x, unsigned int y);
+	unsigned int intersperse(unsigned int x);
+
 	Surface* m_Surface, *m_Backdrop, *m_Heights, *m_Grid;
 	Sprite* m_P1Sprite, *m_P2Sprite, *m_PXSprite, *m_Smoke;
 	int m_ActiveP1, m_ActiveP2;
