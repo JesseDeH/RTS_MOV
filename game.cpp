@@ -122,9 +122,10 @@ void Tank::Tick()
 	int start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
 	int end_x = (grid_x + 1) >= GRIDWIDTH ? grid_x : (grid_x + 1);
 	int end_y = (grid_y + 1) >= GRIDHEIGHT ? grid_y : (grid_y + 1);
-	for (int i = start_x; i <= end_x; i++)
+
+	for (int j = start_y; j <= end_y; j++)
 	{
-		for (int j = start_y; j <= end_y; j++)
+		for (int i = start_x; i <= end_x; i++)
 		{
 #ifdef MORTON
 			int c_gridPointer = game->Morton(i, j);
