@@ -10,18 +10,44 @@ namespace Tmpl8 {
 #define REDMASK	(0xff0000)
 #define GREENMASK (0x00ff00)
 #define BLUEMASK (0x0000ff)
+#define REDBLUE (0x00FF00FF)
+
+#define ADDPLOT1
+//#define ADDPLOT2
 
 typedef unsigned long Pixel;
 
-inline Pixel AddBlend( Pixel a_Color1, Pixel a_Color2 )
+inline Pixel AddBlend(Pixel a_Color1, Pixel a_Color2)
 {
-	const unsigned int r = (a_Color1 & REDMASK) + (a_Color2 & REDMASK);
+#ifdef ADDPLOT2
+	__m128i mask = _mm_set_epi32(BLUEMASK, GREENMASK, REDMASK, 0);
+	union { int t[4]; __m128i c1; };
+	c1 = _mm_set_epi32(a_Color1, a_Color1, a_Color1, 0);
+	__m128i c2 = _mm_set_epi32(a_Color2, a_Color2, a_Color2, 0);
+	c1 = _mm_and_si128(c1, mask);
+	c2 = _mm_and_si128(c2, mask);
+	c1 = _mm_add_epi32(c1, c2);
+	c2 = _mm_and_si128(c1, mask);
+	t[1] = (t[1] >> 24) * REDMASK;
+	t[2] = (t[2] >> 16) * GREENMASK;
+	t[3] = (t[3] >> 8) * BLUEMASK;
+	c1 = _mm_or_si128(c1, c2);
+	return (t[1] + t[2] + t[3]);
+#endif
+#ifndef ADDPLOT2
+	const unsigned int t1 = a_Color1 & REDMASK;
+	const unsigned int t2 = a_Color2 & REDMASK;
+	const unsigned int r = t1 + t2;
 	const unsigned int g = (a_Color1 & GREENMASK) + (a_Color2 & GREENMASK);
 	const unsigned int b = (a_Color1 & BLUEMASK) + (a_Color2 & BLUEMASK);
-	const unsigned r1 = (r & REDMASK) | (REDMASK * (r >> 24));
-	const unsigned g1 = (g & GREENMASK) | (GREENMASK * (g >> 16));
+	const unsigned t3 = r & REDMASK;
+	const unsigned t4 = REDMASK * (r >> 24);
+	const unsigned r1 = t3 | t4;
+	const unsigned g1 = (g & GREENMASK)| (GREENMASK * (g >> 16));
 	const unsigned b1 = (b & BLUEMASK) | (BLUEMASK * (b >> 8));
 	return (r1 + g1 + b1);
+#endif // !ADDPLOT
+
 }
 
 // subtractive blending

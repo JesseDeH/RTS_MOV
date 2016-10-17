@@ -187,7 +187,20 @@ void Surface::Plot( int x, int y, Pixel c )
 
 void Surface::AddPlot( int x, int y, Pixel c )
 { 
+#ifdef ADDPLOT1
+	if(x >= 0)
+		if(y >= 0)
+			if(x < m_Width)
+				if (y < m_Height)
+				{
+					int t = x + y * m_Pitch;
+					int t2 = m_Buffer[x + y * m_Pitch];
+					m_Buffer[t] = AddBlend(c, t2);
+				}
+#endif
+#ifndef ADDPLOT
 	if ((x >= 0) && (y >= 0) && (x < m_Width) && (y < m_Height)) m_Buffer[x + y * m_Pitch] = AddBlend( c, m_Buffer[x + y * m_Pitch] );
+#endif
 }
 
 void Surface::Box( int x1, int y1, int x2, int y2, Pixel c )
