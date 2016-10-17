@@ -13,7 +13,7 @@ namespace Tmpl8 {
 #define GRIDSIZE		16												// How many pixels is one grid space
 #define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE	+ 1)				// How many grid spaces wide is the grid
 #define GRIDHEIGHT		((int) ((MAXP2 / 12) * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
-#define GRIDROW			16											// How much data is there for era
+#define GRIDROW			32											// How much data is there for era
 
 #define GRID
 #define GRID2
@@ -78,7 +78,9 @@ public:
 	void DrawTanks();
 	void PlayerInput();
 	void Tick( float a_DT );
-	Surface* m_Surface, *m_Backdrop, *m_Heights, *m_Grid, *mountain_Grid;
+	Surface* m_Surface, *m_Backdrop, *m_Heights, *m_Grid;
+	unsigned int Morton(unsigned int x, unsigned int y);
+	unsigned int intersperse(unsigned int x);
 	Sprite* m_P1Sprite, *m_P2Sprite, *m_PXSprite, *m_Smoke;
 	int m_ActiveP1, m_ActiveP2;
 	int m_MouseX, m_MouseY, m_DStartX, m_DStartY, m_DFrames;
