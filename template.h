@@ -78,6 +78,8 @@ float3 operator * ( const float3& v, const float& s );
 float2 operator * ( float2& v, float& s );
 float length( const float2& v );
 float sqlength(const float2& v);
+unsigned int morton(const unsigned int x, const unsigned int y);
+unsigned int intersperse(const unsigned int x);
 
 };
 

@@ -13,7 +13,7 @@ static float peakh[16] = { 200, 150, 160, 255, 200, 255, 200, 300, 120, 100,  80
 static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
 #ifdef MORTON
-int tankGrid[0xffffff];
+float* tankGrid;
 #else 
 float tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 #endif 
@@ -101,7 +101,7 @@ void Tank::Tick()
 				int t = ((int)x) + (((int)y) * SCRWIDTH);
 				mountain[t]++;
 #else 
-				game->m_Surface->AddPlot((int)x, (int)y, 0xffff);
+				game->m_Surface->AddPlot((int)x, (int)y, 0x000500);
 #endif // ! MOUNTAIN	
 			}
 		}
@@ -112,7 +112,7 @@ void Tank::Tick()
 	int grid_x = (int)(pos.x / GRIDSIZE);
 	int grid_y = (int)(pos.y / GRIDSIZE);
 #ifdef MORTON
-	int gridPointer = game->Morton(grid_x, grid_y);
+	int gridPointer = morton(grid_x, grid_y);
 #endif
 #ifndef MORTON //&& TILES
 	int gridPointer = (grid_x + (grid_y * GRIDWIDTH)) * GRIDROW;
@@ -128,7 +128,7 @@ void Tank::Tick()
 		for (int i = start_x; i <= end_x; i++)
 		{
 #ifdef MORTON
-			int c_gridPointer = game->Morton(i, j);
+			int c_gridPointer = morton(i, j);
 #endif
 #ifndef MORTON // TILES
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
@@ -205,7 +205,7 @@ void Tank::Tick()
 		for (int j = start_y; j <= end_y; j++)
 		{
 #ifdef MORTON
-			int c_gridPointer = game->Morton(i, j);
+			int c_gridPointer = morton(i, j);
 #endif
 #ifndef MORTON// && TILES
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
@@ -271,7 +271,7 @@ void Tank::ADDTOGRID()
 	int x = (unsigned int)(pos.x / GRIDSIZE);
 	int y = (unsigned int)(pos.y / GRIDSIZE);
 #ifdef MORTON
-	gridPointer = game->Morton(x, y);
+	gridPointer = morton(x, y);
 #else
 	this->gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
 #endif
@@ -342,31 +342,21 @@ for (unsigned int i = start; i < end; i++) if (game->m_Tank[i]->flags & ACTIVE)
 #endif
 }
 
-
-unsigned int Game::Morton(unsigned int x, unsigned int y)
-{
-	return (((intersperse(y) << 1) + intersperse(x)) * GRIDROW);
-}
-
-//separate each bit with a 0
-unsigned int Game::intersperse(unsigned int x)
-{
-	x &= 0x0000ffff;                 // x = ---- ---- ---- ---- fedc ba98 7654 3210
-	x = (x ^ (x << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
-	x = (x ^ (x << 4)) & 0x0f0f0f0f; // x = ---- fedc ---- ba98 ---- 7654 ---- 3210
-	x = (x ^ (x << 2)) & 0x33333333; // x = --fe --dc --ba --98 --76 --54 --32 --10
-	x = (x ^ (x << 1)) & 0x55555555; // x = -f-e -d-c -b-a -9-8 -7-6 -5-4 -3-2 -1-0
-	return x;
-}
-
-
 // Game::Init - Load data, setup playfield
 void Game::Init()
 {
+#ifdef MORTON
+	tankGrid = new float[morton(GRIDWIDTH, GRIDHEIGHT)];
+	for (unsigned int i = 0; i < morton(GRIDWIDTH, GRIDHEIGHT); i++)
+	{
+		tankGrid[i] = 0;
+	}
+#else
 	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*GRIDROW; i++)
 	{
 		tankGrid[i] = 0;
 	}
+#endif
 #ifdef SINCOSLOOKUP
 	for (int j = 0; j < 720; j++)
 	{
@@ -523,9 +513,10 @@ void Game::Tick(float a_DT)
 	for (int y = 0; y < SCRHEIGHT; y++)
 		for (int x = 0; x < SCRWIDTH; x++)
 		{
-			if (int count = mountain[t] > 0)
+			int count = mountain[t];
+			if ( count > 0)
 			{
-				game->m_Surface->AddPlot(x, y, count * 0xffff);
+				game->m_Surface->AddPlot(x, y, count * 0x000500);
 			}
 			t++;
 		}
