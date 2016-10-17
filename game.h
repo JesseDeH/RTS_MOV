@@ -6,18 +6,25 @@
 
 namespace Tmpl8 {
 
-#define MAXP1		800			// increase to test your optimized code
+#define MAXP1		3200	// increase to test your optimized code
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
 
 #define GRIDSIZE		16												// How many pixels is one grid space
-#define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE	+ 1)				// How many grid spaces wide is the grid
+#define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE + 1)				// How many grid spaces wide is the grid
 #define GRIDHEIGHT		((int) ((MAXP2 / 12) * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
-#define GRIDROW			32											// How much data is there for era
+#define GRIDROW			32												// How much data is there for era
+
+#define TILEWIDTH		4
+#define TILEHEIGHT		4
+#define TILEGRIDWIDTH	(GRIDWIDTH / TILEWIDTH)
+#define TILEGRIDHEIGHT  (GRIDHEIGHT / TILEHEIGHT)
 
 #define GRID
 #define GRID2
 #define SINCOSLOOKUP
+//#define TILES
+//#define MORTON
 
 
 class Smoke

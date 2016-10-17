@@ -13,7 +13,7 @@ static float peakh[16] = { 200, 150, 160, 255, 200, 255, 200, 300, 120, 100,  80
 static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
 #ifdef MORTON
-int tankGrid[0xffffff];
+int tankGrid[0xfffffff];
 #else 
 int tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 #endif 
@@ -102,23 +102,37 @@ void Tank::Tick()
 	// evade other tanks
 #ifdef GRID
 	int grid_x = (int)(pos.x / GRIDSIZE);
-	int grid_y = (int)(pos.y / GRIDSIZE);
+	float grid_y = floorf(pos.y / GRIDSIZE);
 #ifdef MORTON
 	int gridPointer = game->Morton(grid_x, grid_y);
+#endif
+#ifdef TILES
+	int tx = ((grid_x / 4) * TILEWIDTH * TILEHEIGHT);
+	int ty = (((int)grid_y / 4) * TILEWIDTH * TILEHEIGHT * TILEGRIDWIDTH);
+	int gx = (grid_x % 4);
+	int gy = ((int)grid_y % 4) * TILEWIDTH;
+	int gridPointer = (tx + ty + gx + gy) * GRIDROW;
 #else
 	int gridPointer = (grid_x + (grid_y * GRIDWIDTH)) * GRIDROW;
 #endif
 	int gridCounter = tankGrid[gridPointer];
 	int start_x = (grid_x - 1) < 0 ? grid_x : (grid_x - 1);
-	int start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
+	float start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
 	int end_x = (grid_x + 1) >= GRIDWIDTH ? grid_x : (grid_x + 1);
-	int end_y = (grid_y + 1) >= GRIDHEIGHT ? grid_y : (grid_y + 1);
+	float end_y = (grid_y + 1) >= GRIDHEIGHT ? grid_y : (grid_y + 1);
 	for (int i = start_x; i <= end_x; i++)
 	{
-		for (int j = start_y; j <= end_y; j++)
+		for (float j = start_y; j <= end_y; j++)
 		{
 #ifdef MORTON
 			int c_gridPointer = game->Morton(i, j);
+#endif
+#ifdef TILES
+			int tx = ((i / 4) * TILEWIDTH * TILEHEIGHT);
+			int ty = (((int)j / 4) * TILEWIDTH * TILEHEIGHT * TILEGRIDWIDTH);
+			int gx = (i % 4);
+			int gy = ((int)j % 4) * TILEWIDTH;
+			int c_gridPointer = (tx + ty + gx + gy) * GRIDROW;
 #else
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
@@ -164,18 +178,25 @@ void Tank::Tick()
 	if (flags & P1)
 		team = 5;
 
-	start_y = max(grid_y - 7, 0);
-	end_y = min(grid_y + 7, GRIDHEIGHT - 1);
-	
 	start_x = max(grid_x - 7, 0);
 	end_x = min(grid_x + 7, GRIDWIDTH - 1);
 
+	float start_y2 = max(grid_y - 7, 0);
+	float end_y2 = min(grid_y + 7, GRIDHEIGHT - 1);
+
 	for (int i = start_x; i <= end_x; i++)
 	{
-		for (int j = start_y; j <= end_y; j++)
+		for (float j = start_y; j <= end_y; j++)
 		{
 #ifdef MORTON
 			int c_gridPointer = game->Morton(i, j);
+#endif
+#ifdef TILES
+			int tx = ((i / 4) * TILEWIDTH * TILEHEIGHT);
+			int ty = (((int)j / 4) * TILEWIDTH * TILEHEIGHT * TILEGRIDWIDTH);
+			int gx = (i % 4);
+			int gy = ((int)j % 4) * TILEWIDTH;
+			int c_gridPointer = (tx + ty + gx + gy) * GRIDROW;
 #else
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
@@ -230,16 +251,21 @@ void Tank::UpdateGrid()
 
 void Tank::ADDTOGRID()
 {
-	int x = (unsigned int)(pos.x / GRIDSIZE);
-	int y = (unsigned int)(pos.y / GRIDSIZE);
+	int x = ((unsigned int)pos.x / GRIDSIZE);
+	int y = ((unsigned int)pos.y / GRIDSIZE);
 #ifdef MORTON
 	gridPointer = game->Morton(x, y);
-#else
+#endif
+#ifdef TILES
+	int tx = ((x / 4) * TILEWIDTH * TILEHEIGHT);
+	int ty = ((y / 4) * TILEWIDTH * TILEHEIGHT * TILEGRIDWIDTH);
+	int gx = (x % 4);
+	int gy = (y % 4) * TILEWIDTH;
+	gridPointer = (tx + ty + gx + gy) * GRIDROW;
+#else 
 	gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
 #endif
 	int gridCounter = ++tankGrid[gridPointer];
-	if (gridCounter > GRIDROW)
-		throw ERROR;
 	gridPosition = gridPointer + gridCounter;
 	tankGrid[gridPosition] = listPosition;
 }
@@ -325,10 +351,18 @@ unsigned int Game::intersperse(unsigned int x)
 // Game::Init - Load data, setup playfield
 void Game::Init()
 {
+#ifdef MORTON
+
+	for (int i = 0; i < 0xfffffff; i++)
+	{
+		tankGrid[i] = 0;
+	}
+#else
 	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*GRIDROW; i++)
 	{
 		tankGrid[i] = 0;
 	}
+#endif
 #ifdef SINCOSLOOKUP
 	for (int j = 0; j < 720; j++)
 	{
