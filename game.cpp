@@ -12,13 +12,20 @@ static float peakh[16] = { 200, 150, 160, 255, 200, 255, 200, 300, 120, 100,  80
 // player, bullet and smoke data
 static int aliveP1 = MAXP1, aliveP2 = MAXP2;
 static Bullet bullet[MAXBULLET];
+
+//initialize tank grid
 #ifdef MORTON
 float* tankGrid;
-#else 
+#endif
+#ifdef GRID
 float tankGrid[GRIDWIDTH * GRIDHEIGHT * GRIDROW];
 #endif 
+
+//initialize sine and cosine lookup tables
+#ifdef SINCOSLOOKUP
 float sinTable[720];
 float cosTable[720];
+#endif
 
 char mountain [SCRWIDTH + SCRHEIGHT * SCRWIDTH];
 
@@ -90,6 +97,7 @@ void Tank::Tick()
 			for (int j = 0; j < 720; j++)
 			{
 #ifdef SINCOSLOOKUP
+				//lookup sine and cosine instead of calculating
 				float x = peakx[i] + r * sinTable[j];
 				float y = peaky[i] + r * cosTable[j];
 #else
@@ -98,6 +106,7 @@ void Tank::Tick()
 #endif
 
 #ifdef MOUNTAIN
+				//count amount of times pixel needs to be drawn, so we can do it in one go.
 				int t = ((int)x) + (((int)y) * SCRWIDTH);
 				mountain[t]++;
 #else 
@@ -109,14 +118,17 @@ void Tank::Tick()
 
 	// evade other tanks
 #ifdef GRID
+	//coordinates in the grid
 	int grid_x = (int)(pos.x / GRIDSIZE);
 	int grid_y = (int)(pos.y / GRIDSIZE);
 #ifdef MORTON
+	//get index by Morton encoding
 	int gridPointer = morton(grid_x, grid_y);
-#endif
-#ifndef MORTON //&& TILES
+#else
+	//get the index of gridsquare
 	int gridPointer = (grid_x + (grid_y * GRIDWIDTH)) * GRIDROW;
 #endif
+	//loop over all grid squares within range
 	float gridCounter = tankGrid[gridPointer];
 	int start_x = (grid_x - 1) < 0 ? grid_x : (grid_x - 1);
 	int start_y = (grid_y - 1) < 0 ? grid_y : (grid_y - 1);
@@ -128,27 +140,24 @@ void Tank::Tick()
 		for (int i = start_x; i <= end_x; i++)
 		{
 #ifdef MORTON
+			//get index by Morton encoding
 			int c_gridPointer = morton(i, j);
-#endif
-#ifndef MORTON // TILES
+#else
+			//get the index of gridsquare
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
 			float c_gridCounter = tankGrid[c_gridPointer];
 			for (int c = 1; c <= c_gridCounter; c++)
 			{
 #ifdef POSINGRID
-				//debug
-				//int c_tankPointer = tankGrid[c_gridPointer + (c * 3)];
-				//if (game->m_Tank[c_tankPointer] == this) continue;
-				//float2 d = pos - game->m_Tank[c_tankPointer]->pos;
-				//Tank* t = game->m_Tank[c_tankPointer];
-				int c_tankPointer2 = c_gridPointer + (c * 3);
-				if (c_tankPointer2 == gridPosition) continue;
+				//get tank coordinates from the grid
+				int c_tankPointer = c_gridPointer + (c * 3);
+				if (c_tankPointer == gridPosition) continue;
 
-				float2 d2 = pos - float2(tankGrid[c_tankPointer2 + 1], tankGrid[c_tankPointer2 + 2]);
-				//if (length(d2) < 8) force += normalize(d2) * 2.0f;
-				if (sqlength(d2) < 64) force += normalize(d2) * 2.0f;
-				else if (sqlength(d2) < 256) force += normalize(d2) * 0.4f;
+				//use squared length to avoid square root
+				float2 d = pos - float2(tankGrid[c_tankPointer + 1], tankGrid[c_tankPointer + 2]);
+				if (sqlength(d) < 64) force += normalize(d) * 2.0f;
+				else if (sqlength(d) < 256) force += normalize(d) * 0.4f;
 #else
 				int c_tankPointer = tankGrid[c_gridPointer + c];
 				if (game->m_Tank[c_tankPointer] == this) continue;
@@ -182,15 +191,17 @@ void Tank::Tick()
 	// update speed using accumulated force
 	speed += force, speed = normalize(speed), pos += speed * maxspeed * 0.5f;
 #ifdef GRID
-	UpdateGrid();
-#endif // GRID
-#ifdef GRID2
+	UpdateGrid(); //update the tanks location in the grid.
+
+	
 	if (--reloading >= 0 || !(flags & ACTIVE)) return;
-	if ((pos.x < 0) || (pos.x >(SCRWIDTH - 1)) || (pos.y < 0) || (pos.y >(SCRHEIGHT - 1))) return; // off-screen
+	// can't shoot from off-screen
+	if ((pos.x < 0) || (pos.x >(SCRWIDTH - 1)) || (pos.y < 0) || (pos.y >(SCRHEIGHT - 1))) return; 
 	int team = 3;
 	if (flags & P1)
 		team = 5;
 
+	//Check neighbouring gridsquares
 	start_y = max(grid_y - 7, 0);
 	end_y = min(grid_y + 7, GRIDHEIGHT - 1);
 	
@@ -199,26 +210,21 @@ void Tank::Tick()
 
 	int start_y2 = max(grid_y - 7, 0);
 	int end_y2 = min(grid_y + 7, GRIDHEIGHT - 1);
-	//int c_gridPointer = (start_x + (start_y * GRIDWIDTH)) * GRIDROW;
 	for (int i = start_x; i <= end_x; i++)
 	{
 		for (int j = start_y; j <= end_y; j++)
 		{
 #ifdef MORTON
 			int c_gridPointer = morton(i, j);
-#endif
-#ifndef MORTON// && TILES
+#else
 			int c_gridPointer = (i + (j * GRIDWIDTH)) * GRIDROW;
 #endif
 			float c_gridCounter = tankGrid[c_gridPointer];
-			/*int c = c_gridPointer + 1;
-			int c_max = c_gridPointer + c_gridCounter;
-			int c_dif = c_max - c;*/
 			for (int d = c_gridPointer + 3; d <= ((int)c_gridCounter * 3) + c_gridPointer; d+=3)
 			{
 				int c_tankPointer = (int)tankGrid[d];
-				if (game->m_Tank[c_tankPointer]->flags == team)
-				//if ((c_tankPointer >= MAXP2 && listPosition < MAXP2) || (c_tankPointer < MAXP2 && listPosition >= MAXP2))
+				//if the other tank is in the other team
+				if ((c_tankPointer >= MAXP1 && listPosition < MAXP1) || (c_tankPointer < MAXP1 && listPosition >= MAXP1))
 				{
 					float2 l = game->m_Tank[c_tankPointer]->pos - pos;
 					if ((length(l) < 100) && (dot(normalize(l), speed) > 0.99999f))
@@ -249,9 +255,10 @@ void Tank::Tick()
 #endif // !GRID
 }
 
+//update tank's location
 void Tank::UpdateGrid()
 {
-	// Remove from old position
+	// Remove from old position and set last tank to the new empty spot
 	int gridCounter = (int)tankGrid[gridPointer];
 	tankGrid[gridPosition] = tankGrid[gridPointer + (gridCounter * 3)];
 	tankGrid[gridPosition + 1] = tankGrid[gridPointer + (gridCounter * 3) + 1];
@@ -259,105 +266,54 @@ void Tank::UpdateGrid()
 	int tankPointer = (int)tankGrid[gridPosition];
 	game->m_Tank[tankPointer]->gridPosition = gridPosition;
 
-
+	//decrease number of tanks in this gridsquare
 	tankGrid[gridPointer]--;
 
 	// Add to new position
 	ADDTOGRID();
 }
 
+//add tank to the grid
 void Tank::ADDTOGRID()
 {
+	//calculate grid coordinates
 	int x = (unsigned int)(pos.x / GRIDSIZE);
 	int y = (unsigned int)(pos.y / GRIDSIZE);
 #ifdef MORTON
 	gridPointer = morton(x, y);
 #else
-	this->gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
+	//store index in tank
+	gridPointer = (x + (y * GRIDWIDTH)) * GRIDROW;
 #endif
+	//update grid with tanks information
 	int gridCounter = (int)++tankGrid[gridPointer];
-	this->gridPosition = gridPointer + (gridCounter * 3);
+	gridPosition = gridPointer + (gridCounter * 3);
 	tankGrid[gridPosition] = (float)listPosition;
 	tankGrid[gridPosition + 1] = pos.x;
 	tankGrid[gridPosition + 2] = pos.y;
 }
 
-void Tank::CheckShooting()
-{
-#ifdef UNUSED
-	if (--reloading >= 0 || !(flags & ACTIVE)) return;
-	int team = 3;
-	if (flags & P1)
-		team = 5;
-
-	float grid_y = floorf(pos.y / GRIDSIZE);
-	float start_y = max(grid_y - 7, 0);
-	float end_y = min(grid_y + 7, GRIDHEIGHT - 1);
-
-	float grid_x = floorf(pos.x / GRIDSIZE);
-	float start_x = max(grid_x - 7, 0);
-	float end_x = min(grid_x + 7, GRIDWIDTH - 1);
-
-	for (float i = start_x; i <= end_x; i++)
-	{
-		for (float j = start_y; j <= end_y; j++)
-		{
-			int c_gridPointer = ((int)i + ((int)j * GRIDWIDTH)) * GRIDROW;
-			int c_gridCounter = tankGrid[c_gridPointer];
-			int c = c_gridPointer + 1;
-			int c_max = c_gridPointer + c_gridCounter;
-			int c_dif = c_max - c;
-			for (int d = c_dif; d >= 0; d--)
-			{
-				int c_tankPointer = tankGrid[c_max - d];
-				if (game->m_Tank[c_tankPointer]->flags == team)
-				{
-					float2 d = game->m_Tank[c_tankPointer]->pos - pos;
-					if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
-					{
-						Fire(flags & (P1 | P2), pos, speed); // shoot
-						reloading = 200; // and wait before next shot is ready
-						break;
-					}
-				}
-			}
-		}
-	}
-#endif
-
-#ifndef GRID2
-if (--reloading >= 0) return;
-unsigned int start = 0, end = MAXP1;
-if (flags & P1) start = MAXP1, end = MAXP1 + MAXP2;
-for (unsigned int i = start; i < end; i++) if (game->m_Tank[i]->flags & ACTIVE)
-{
-	float2 d = game->m_Tank[i]->pos - pos;
-	if ((length(d) < 100) && (dot(normalize(d), speed) > 0.99999f))
-	{
-		Fire(flags & (P1 | P2), pos, speed); // shoot
-		reloading = 200; // and wait before next shot is ready
-		break;
-	}
-}
-#endif
-}
-
 // Game::Init - Load data, setup playfield
 void Game::Init()
 {
+#ifdef GRID
 #ifdef MORTON
+	//initialize tankgrid
 	tankGrid = new float[morton(GRIDWIDTH, GRIDHEIGHT)];
 	for (unsigned int i = 0; i < morton(GRIDWIDTH, GRIDHEIGHT); i++)
 	{
 		tankGrid[i] = 0;
 	}
 #else
+	//initialize tankgrid
 	for (int i = 0; i < GRIDWIDTH*GRIDHEIGHT*GRIDROW; i++)
 	{
 		tankGrid[i] = 0;
 	}
 #endif
+#endif
 #ifdef SINCOSLOOKUP
+	//initialize and calculate lookup tables sine and cosine
 	for (int j = 0; j < 720; j++)
 	{
 		sinTable[j] = sinf((float)j * PI / 360.0f);
@@ -381,26 +337,13 @@ void Game::Init()
 	m_PXSprite = new Sprite(new Surface("testdata/deadtank.tga"), 1, Sprite::BLACKFLARE);
 	m_Smoke = new Sprite(new Surface("testdata/smoke.tga"), 10, Sprite::FLARE);
 
-#ifndef TEST
-	mountain_Grid = new Surface(500, 500);
-	Pixel* bufferGrid = m_Grid->GetBuffer();
-	Pixel* bufferMountain = m_Grid->GetBuffer();
-	for (int i = 0; i < 500; i++)
-		for (int j = 0; j < 500; j++)
-		{
-			int t = i + j * mountain_Grid->GetPitch();
-			int t2
-			bufferGrid[t] = bufferMountain[t];
-		}
-	m_Grid->SetBuffer(bufferGrid);
-#endif
-
 	// create blue tanks
 	for (unsigned int i = 0; i < MAXP1; i++)
 	{
 		Tank* t = m_Tank[i] = new Tank();
 		t->pos = float2((float)((i % 5) * 20), (float)((i / 5) * 20 + 50));
 #ifdef GRID
+		//add the tank to the grid
 		t->listPosition = i;
 		t->ADDTOGRID();
 #endif //GRID
@@ -413,6 +356,7 @@ void Game::Init()
 		Tank* t = m_Tank[i + MAXP1] = new Tank();
 		t->pos = float2((float)((i % 12) * 20 + 900), (float)((i / 12) * 20 + 600));
 #ifdef GRID
+		//add the tank to the grid
 		t->listPosition = i + MAXP1;
 		t->ADDTOGRID();
 #endif //GRID
@@ -478,37 +422,18 @@ void Game::Tick(float a_DT)
 		}
 #endif
 
-#ifdef MOUNTAIN2
-	for (int x = 0; x < SCRWIDTH; x++)
-		for (int y = 0; y < SCRHEIGHT; y++)
-		{
-			int t = x + (y * SCRWIDTH);
-			mountain[t] = 0;
-		}
-#endif
-
 	POINT p;
 	GetCursorPos(&p);
 	ScreenToClient(FindWindow(NULL, "Template"), &p);
 	m_LButton = (GetAsyncKeyState(VK_LBUTTON) != 0), m_MouseX = p.x, m_MouseY = p.y;
 	m_Backdrop->CopyTo(m_Surface, 0, 0);
 	for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++) m_Tank[i]->Tick();
-	//for (unsigned int i = 0; i < (MAXP1 + MAXP2); i++) m_Tank[i]->CheckShooting();
 	for (unsigned int i = 0; i < MAXBULLET; i++) bullet[i].Tick();
 	DrawTanks();
 	PlayerInput();
 
-#ifdef MOUNTAIN2
-	for (int t = 0; t < max; t++)
-	{
-		int count = mountain[t];
-		int x = t % SCRWIDTH;
-		int y = t / SCRWIDTH;
-		game->m_Surface->AddPlot(x, y, count * 0xffff);
-	}
-#endif
-
 #ifdef MOUNTAIN
+	//draw circles around moutain peaks using data gathered in tank.tick()
 	int t = 0;
 	for (int y = 0; y < SCRHEIGHT; y++)
 		for (int x = 0; x < SCRWIDTH; x++)

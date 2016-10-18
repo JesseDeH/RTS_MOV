@@ -6,7 +6,7 @@
 
 namespace Tmpl8 {
 
-#define MAXP1		10000	// increase to test your optimized code
+#define MAXP1		200	// increase to test your optimized code
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
 
@@ -16,10 +16,8 @@ namespace Tmpl8 {
 #define GRIDROW			(32 * 3)												// How much data is there for era
 
 #define GRID
-#define GRID2
 #define SINCOSLOOKUP
 #define POSINGRID
-//#define TILES
 //#define MORTON
 #define MOUNTAIN
 #define TEST
@@ -50,9 +48,9 @@ public:
 	float2 pos, speed, target;
 	float maxspeed;
 	int flags, reloading;
-	int listPosition;
-	int gridPosition;
-	int gridPointer;
+	int listPosition; //position in m_Tank array
+	int gridPosition; //position of gridCounter in grid
+	int gridPointer;  //position in grid
 	Smoke smoke;
 };
 

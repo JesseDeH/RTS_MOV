@@ -24,12 +24,15 @@ float dot( const float2& a, const float2& b ) { return a.x * b.x + a.y * b.y; }
 float3 operator * ( const float3& v, const float& s ) { return float3( v.x * s, v.y * s, v.z * s ); }
 float2 operator * ( float2& v, float& s ) { return float2( v.x * s, v.y * s ); }
 
+//morton code generation
+//by: https://fgiesen.wordpress.com/2009/12/13/decoding-morton-codes/
 unsigned int morton(const unsigned int x, const unsigned int y)
 {
-	return (((intersperse(y) << 1) + intersperse(x)) * GRIDROW);
+	return (((splitBitwise(y) << 1) + splitBitwise(x)) * GRIDROW);
 }
 
-unsigned int intersperse(unsigned int x)
+//split bitwise
+unsigned int splitBitwise(unsigned int x)
 {
 	x &= 0x0000ffff;                 // x = ---- ---- ---- ---- fedc ba98 7654 3210
 	x = (x ^ (x << 8)) & 0x00ff00ff; // x = ---- ---- fedc ba98 ---- ---- 7654 3210
