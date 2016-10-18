@@ -516,7 +516,8 @@ void Game::Tick(float a_DT)
 			int count = mountain[t];
 			if ( count > 0)
 			{
-				game->m_Surface->AddPlot(x, y, count * 0x000500);
+				int g = (count * 0x000500);
+				game->m_Surface->AddPlot(x, y, (g & GREENMASK) | (GREENMASK * (g >> 16)));
 			}
 			t++;
 		}
