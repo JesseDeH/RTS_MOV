@@ -260,9 +260,13 @@ void Tank::UpdateGrid()
 {
 	// Remove from old position and set last tank to the new empty spot
 	int gridCounter = (int)tankGrid[gridPointer];
+#ifdef POSINGRID
 	tankGrid[gridPosition] = tankGrid[gridPointer + (gridCounter * 3)];
 	tankGrid[gridPosition + 1] = tankGrid[gridPointer + (gridCounter * 3) + 1];
 	tankGrid[gridPosition + 2] = tankGrid[gridPointer + (gridCounter * 3) + 2];
+#else
+	tankGrid[gridPosition] = tankGrid[gridPointer + gridCounter];
+#endif
 	int tankPointer = (int)tankGrid[gridPosition];
 	game->m_Tank[tankPointer]->gridPosition = gridPosition;
 
@@ -287,10 +291,15 @@ void Tank::ADDTOGRID()
 #endif
 	//update grid with tanks information
 	int gridCounter = (int)++tankGrid[gridPointer];
+#ifdef POSINGRID
 	gridPosition = gridPointer + (gridCounter * 3);
 	tankGrid[gridPosition] = (float)listPosition;
 	tankGrid[gridPosition + 1] = pos.x;
 	tankGrid[gridPosition + 2] = pos.y;
+#else
+	gridPosition = gridPointer + (gridCounter);
+	tankGrid[gridPosition] = (float)listPosition;
+#endif
 }
 
 // Game::Init - Load data, setup playfield

@@ -10,17 +10,20 @@ namespace Tmpl8 {
 #define MAXP2		 (4 * MAXP1)	// because the player is smarter than the AI
 #define MAXBULLET	200
 
-#define GRIDSIZE		16												// How many pixels is one grid space
-#define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE	+ 1)				// How many grid spaces wide is the grid
-#define GRIDHEIGHT		((int) ((MAXP2 / 12) * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
-#define GRIDROW			(32 * 3)												// How much data is there for era
-
 #define GRID
 #define SINCOSLOOKUP
 #define POSINGRID
-//#define MORTON
+	//#define MORTON
 #define MOUNTAIN
-#define TEST
+
+#define GRIDSIZE		16												// How many pixels is one grid space
+#define GRIDWIDTH		((11 * 20 + 900) / GRIDSIZE	+ 1)				// How many grid spaces wide is the grid
+#define GRIDHEIGHT		((int) ((MAXP2 / 12) * 20 + 600) / GRIDSIZE + 1)	// How many grid spaces high is the grid
+#ifdef POSINGRID
+	#define GRIDROW			(32 * 3)												// How much data is there for era
+#else
+	#define GRIDROW			32
+#endif
 
 class Smoke
 {
@@ -44,7 +47,6 @@ public:
 	void Tick();
 	void UpdateGrid();
 	void ADDTOGRID();
-	void Test(int i, int j);
 	float2 pos, speed, target;
 	float maxspeed;
 	int flags, reloading;
